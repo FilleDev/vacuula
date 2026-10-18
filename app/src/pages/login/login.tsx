@@ -12,7 +12,7 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     const { t } = useTranslation()
     const { mascot } = useMascot()
     const [password, setPassword] = useState('')
-    const [error, setError] = useState<'wrongPassword' | 'httpsRequired' | null>(null)
+    const [error, setError] = useState<'wrongPassword' | 'httpsRequired' | 'tooManyAttempts' | null>(null)
     const [busy, setBusy] = useState(false)
 
     const submit = () => {
@@ -21,7 +21,10 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
         setError(null)
         Http.login(password)
             .then(onLoggedIn)
-            .catch(err => setError(err.response?.status === 400 ? 'httpsRequired' : 'wrongPassword'))
+            .catch(err => {
+                const status = err.response?.status
+                setError(status === 400 ? 'httpsRequired' : status === 429 ? 'tooManyAttempts' : 'wrongPassword')
+            })
             .finally(() => setBusy(false))
     }
 

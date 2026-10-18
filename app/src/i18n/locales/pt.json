@@ -200,7 +200,8 @@
         "password": "Palavra-passe",
         "submit": "Entrar",
         "wrongPassword": "Palavra-passe errada",
-        "httpsRequired": "Só é possível entrar através de HTTPS. Abra o painel com https://"
+        "httpsRequired": "Só é possível entrar através de HTTPS. Abra o painel com https://",
+        "tooManyAttempts": "Demasiadas palavras-passe erradas. Tente novamente mais tarde."
     },
     "serverUnreachable": {
         "title": "Não foi possível ligar ao servidor",

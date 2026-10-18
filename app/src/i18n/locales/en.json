@@ -200,7 +200,8 @@
         "password": "Password",
         "submit": "Log in",
         "wrongPassword": "Wrong password",
-        "httpsRequired": "Logging in only works over HTTPS. Open the panel with https://"
+        "httpsRequired": "Logging in only works over HTTPS. Open the panel with https://",
+        "tooManyAttempts": "Too many wrong passwords. Try again later."
     },
     "serverUnreachable": {
         "title": "Could not connect to the server",

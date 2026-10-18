@@ -12,6 +12,7 @@ import hmac
 import logging
 import secrets
 import ssl
+import threading
 import time
 from http.cookies import SimpleCookie
 
@@ -24,7 +25,10 @@ if TYPE_CHECKING:
 
 COOKIE_NAME = "vacuula_auth"
 COOKIE_MAX_AGE_S = 365 * 24 * 60 * 60
-WRONG_PASSWORD_DELAY_S = 1.0
+# Per-IP limit on wrong passwords: after MAX_FAILED_LOGINS within the window the IP is
+# locked out until the oldest failure is older than the window
+MAX_FAILED_LOGINS = 5
+FAILED_LOGIN_WINDOW_S = 15 * 60
 SECRET_FILE = DATA_DIR / "auth_secret"
 
 # Installer + health check (server, cert) and the login flow itself stay open
@@ -94,6 +98,34 @@ def needs_auth(req: RouterHandler) -> bool:
     return not is_authenticated(req)
 
 
+_failed_logins: dict[str, list[float]] = {}  # ip -> times of recent failed attempts
+_failed_lock = threading.Lock()
+
+
+def _take_attempt(ip: str) -> int:
+    """Count a login attempt for `ip` up front (so parallel requests can't slip past the
+    limit). Returns 0 if it may go ahead, else the seconds until it may try again."""
+    now = time.time()
+    with _failed_lock:
+        # drop attempts that fell out of the window, for every IP, so the dict can't grow forever
+        for key in list(_failed_logins):
+            recent = [t for t in _failed_logins[key] if now - t < FAILED_LOGIN_WINDOW_S]
+            if recent:
+                _failed_logins[key] = recent
+            else:
+                del _failed_logins[key]
+        times = _failed_logins.setdefault(ip, [])
+        if len(times) >= MAX_FAILED_LOGINS:
+            return max(1, int(times[-MAX_FAILED_LOGINS] + FAILED_LOGIN_WINDOW_S - now))
+        times.append(now)
+        return 0
+
+
+def _clear_failed_logins(ip: str) -> None:
+    with _failed_lock:
+        _failed_logins.pop(ip, None)
+
+
 def _is_https(req: RouterHandler) -> bool:
     """Direct TLS (gen3 port) or a reverse proxy that terminated HTTPS for us."""
     if isinstance(req.connection, ssl.SSLSocket):
@@ -119,13 +151,27 @@ def post_login(req: RouterHandler) -> None:
         req.send_error_response(400, "HTTPS required")
         return
 
+    ip = req.client_ip()
+    if retry_after := _take_attempt(ip):
+        logger.warning("Panel login from %s blocked, too many wrong passwords (%ds left)", ip, retry_after)
+        req.send_response(429)
+        req.send_header("Retry-After", str(retry_after))
+        req.send_header("Content-Type", "application/json")
+        body = b'{"error": "Too many attempts"}'
+        req.send_header("Content-Length", str(len(body)))
+        req.send_header("Connection", "close")
+        req.end_headers()
+        req.wfile.write(body)
+        req.wfile.flush()
+        return
+
     if not enabled() or not hmac.compare_digest(password.encode(), VACUULA_PASSWORD.encode()):
-        logger.warning("Failed panel login from %s", req.client_ip())
-        time.sleep(WRONG_PASSWORD_DELAY_S)  # slows down guessing
+        logger.warning("Failed panel login from %s", ip)
         req.send_unauthorized("Wrong password")
         return
 
-    logger.info("Panel login from %s", req.client_ip())
+    _clear_failed_logins(ip)
+    logger.info("Panel login from %s", ip)
     req.send_response(200)
     req.send_header("Set-Cookie", f"{COOKIE_NAME}={_make_token()}; Max-Age={COOKIE_MAX_AGE_S}; Path=/; HttpOnly; Secure; SameSite=Lax")
     req.send_header("Cache-Control", "no-store")
