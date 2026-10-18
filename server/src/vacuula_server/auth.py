@@ -115,17 +115,17 @@ def post_login(req: RouterHandler) -> None:
 
     # Only log in over HTTPS, so the password and the cookie never travel in plain text
     if not _is_https(req):
-        logger.warning("Refused panel login over plain HTTP from %s", req.client_address[0])
+        logger.warning("Refused panel login over plain HTTP from %s", req.client_ip())
         req.send_error_response(400, "HTTPS required")
         return
 
     if not enabled() or not hmac.compare_digest(password.encode(), VACUULA_PASSWORD.encode()):
-        logger.warning("Failed panel login from %s", req.client_address[0])
+        logger.warning("Failed panel login from %s", req.client_ip())
         time.sleep(WRONG_PASSWORD_DELAY_S)  # slows down guessing
         req.send_unauthorized("Wrong password")
         return
 
-    logger.info("Panel login from %s", req.client_address[0])
+    logger.info("Panel login from %s", req.client_ip())
     req.send_response(200)
     req.send_header("Set-Cookie", f"{COOKIE_NAME}={_make_token()}; Max-Age={COOKIE_MAX_AGE_S}; Path=/; HttpOnly; Secure; SameSite=Lax")
     req.send_header("Cache-Control", "no-store")

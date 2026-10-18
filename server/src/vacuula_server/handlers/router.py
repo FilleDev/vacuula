@@ -42,8 +42,20 @@ class RouterHandler(BaseHTTPRequestHandler):
         """Handle CORS preflight requests"""
         self.send_ok()
 
+    def client_ip(self) -> str:
+        """Get the client ip from the proxy's X-Real-IP / X-Forwarded-For."""
+        peer = self.client_address[0]
+        if peer not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+            return peer
+        real_ip = self.headers.get("X-Real-IP", "").strip()
+        if real_ip:
+            return real_ip
+        forwarded = self.headers.get("X-Forwarded-For", "")
+        # the proxy appends the address it saw last
+        return forwarded.split(",")[-1].strip() or peer
+
     def log_message(self, format, *args):
-        logger.info("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
+        logger.info("%s - - [%s] %s" % (self.client_ip(), self.log_date_time_string(), format % args))
 
     def read_data(self):
         try:
