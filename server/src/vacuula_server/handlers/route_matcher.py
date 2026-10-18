@@ -9,6 +9,7 @@ from typing import Callable, Optional, Tuple, List
 from .app import get_robots, get_maps, get_map, get_run, post_map, post_robot, get_runs, connect_robot, post_robot_command, get_server_info
 from .events import get_events
 from vacuula_server.handlers.setup import get_cert, get_log, get_log_full
+from vacuula_server import auth
 
 #gen4
 import vacuula_server.gen4.app as gen4
@@ -41,6 +42,8 @@ APP_ROUTES: List[Tuple[str, str, Handler]] = [
     ("GET", "/api/log", get_log),
     ("GET", "/api/log/full", get_log_full),
     ("GET", "/api/server", get_server_info),
+    ("GET", "/api/auth", auth.get_auth),
+    ("POST", "/api/login", auth.post_login),
     ("GET", "/api/robots", get_robots),
     ("GET", "/api/events", get_events),
     ("GET", r"/api/robot/(.+)/connect", connect_robot),

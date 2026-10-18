@@ -195,6 +195,13 @@
         "downloadLogs": "Download logs",
         "comingSoon": "Lots more coming soon - stay tuned!"
     },
+    "login": {
+        "title": "Log in to Vacuula",
+        "password": "Password",
+        "submit": "Log in",
+        "wrongPassword": "Wrong password",
+        "httpsRequired": "Logging in only works over HTTPS. Open the panel with https://"
+    },
     "serverUnreachable": {
         "title": "Could not connect to the server",
         "subtitle": "The app could not connect to the Vacuula server! Please make sure the server is running and reachable from this device.",

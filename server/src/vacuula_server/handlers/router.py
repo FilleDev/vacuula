@@ -2,6 +2,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler
 import logging
 from vacuula_server.constants import BASE_DIR
+from vacuula_server import auth
 from vacuula_server.handlers.route_matcher import BrainslugHandler, BEEHIVE_ROUTES, NUCLEO_ROUTES, APP_ROUTES, S3_ROUTES
 import json
 import socket
@@ -121,6 +122,8 @@ class RouterHandler(BaseHTTPRequestHandler):
 
     # Routing logic
     def route(self):
+        if auth.needs_auth(self):
+            return self.send_unauthorized("Login required")
         if self.path == "/web" or self.path.startswith("/web/") or self.path == "/favicon.ico":
             return self.serve_web()
         accept = self.headers.get("Accept", "")

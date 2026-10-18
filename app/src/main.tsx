@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from "react-router";
 import { AppProvider } from './context/AppContext'
+import { RequireLogin } from './components/require/requireLogin'
 import './i18n'
 import './theme/theme.css'
 import './theme'
@@ -9,9 +10,11 @@ import './index.css'
 import App from './app.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <AppProvider>
-    <BrowserRouter basename='/web'>
-      <App />
-    </BrowserRouter>
-  </AppProvider>,
+  <RequireLogin>
+    <AppProvider>
+      <BrowserRouter basename='/web'>
+        <App />
+      </BrowserRouter>
+    </AppProvider>
+  </RequireLogin>,
 )

@@ -128,6 +128,7 @@ We have made an easy to use installer to set your robot up!
 | MDNS_ENABLED | True    | If server should run MDNS for auto-discovering                                                                      |
 | TZ           | Etc/UTC | If timezone of computer cannot get fetched, please set this to the correct timezone for schedules to work correctly |
 | HOST_IP      | 0.0.0.0 | What IP the Vacuula server hosts to, useful if you have multiple IP addresses                                       |
+| VACUULA_PASSWORD | _(empty)_ | Password for the web panel. When set, the first visit asks for it and the browser is remembered for 1 year. Changing it logs everyone out. Logging in requires HTTPS (put the webapp behind a reverse proxy) |
 
 ### Platform architecture
 We have currently only tested and verified on `ARM 64-bit` and `x86 64-bit`. However, we want the server to support at least `ARM 32-bit` and possibly `x86 32-bit` as well. We are looking into what we can do to make sure these platforms are also supported. The main reason behind wanting to support them is that the server can run on older SBCs. 

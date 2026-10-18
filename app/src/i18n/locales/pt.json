@@ -195,6 +195,13 @@
         "downloadLogs": "Descarregar logs",
         "comingSoon": "Muito mais em breve - fique atento!"
     },
+    "login": {
+        "title": "Entrar no Vacuula",
+        "password": "Palavra-passe",
+        "submit": "Entrar",
+        "wrongPassword": "Palavra-passe errada",
+        "httpsRequired": "Só é possível entrar através de HTTPS. Abra o painel com https://"
+    },
     "serverUnreachable": {
         "title": "Não foi possível ligar ao servidor",
         "subtitle": "A aplicação não conseguiu ligar ao servidor Vacuula! Confirme que o servidor está a funcionar e que é acessível a partir deste dispositivo.",

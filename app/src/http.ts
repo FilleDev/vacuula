@@ -68,6 +68,8 @@ instance.interceptors.response.use(
   },
   (error) => {
     if (!error.config?.skipLoader) stopLoading();
+    // panel password is set and the login cookie is missing or expired: reload to the login screen
+    if (error.response?.status === 401 && error.config?.url !== '/login') location.reload();
     return Promise.reject(error);
   }
 );
@@ -132,6 +134,16 @@ export class Http {
 
   static getVacuulaCert() {
     return instance.get('/cert');
+  }
+
+  /** Whether the panel needs a password, and if this browser is logged in */
+  static getAuth() {
+    return instance.get<{ required: boolean, authenticated: boolean }>('/auth', { skipLoader: true });
+  }
+
+  /** Sets a 1-year login cookie on success, 401 on a wrong password */
+  static login(password: string) {
+    return instance.post('/login', { password }, { skipLoader: true });
   }
 
   static updateRobot(serial: string, data: { name: string }) {

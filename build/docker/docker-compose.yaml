@@ -9,6 +9,7 @@ services:
       - GEN3_ENABLED=True
       - GEN4_ENABLED=True
       - MDNS_ENABLED=True
+      # - VACUULA_PASSWORD=change-me # uncomment to require a password for the web panel
       # - TZ=Etc/UTC # uncomment and change only if Vacuula cannot detect your timezone automatically
     volumes:
       - vacuula-data:/server/data

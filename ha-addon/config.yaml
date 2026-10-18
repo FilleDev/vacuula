@@ -35,3 +35,4 @@ schema:
   MDNS_ENABLED: bool
   TZ: str
   HOST_IP: str
+  VACUULA_PASSWORD: ""

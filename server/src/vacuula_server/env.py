@@ -66,6 +66,7 @@ GEN3_ENABLED: bool = _get_bool_env("GEN3_ENABLED", True)
 GEN4_ENABLED: bool = _get_bool_env("GEN4_ENABLED", True)
 MDNS_ENABLED: bool = _get_bool_env("MDNS_ENABLED", True)
 HOST_IP: str = _get_str_env("HOST_IP", "0.0.0.0")
+VACUULA_PASSWORD: str = _get_str_env("VACUULA_PASSWORD", "")
 
 # Validations
 if len(set([GEN3_PORT, GEN4_PORT, VACUULA_PORT])) != 3:
