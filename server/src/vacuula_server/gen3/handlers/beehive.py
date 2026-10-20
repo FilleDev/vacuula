@@ -37,12 +37,12 @@ def post_links(req: RouterHandler) -> None:
 
     logger.debug("Linking robot %s", serial)
 
-    if "--IV--" not in name:
+    if "--" not in name:
         logger.error("Installer version was not sent! %s: %s", serial, name)
         req.send_bad_request("no installer version sent")
         return
 
-    name, installed_with = name.split("--IV--", 1)
+    name, installed_with = name.split("--", 1)
 
     # if serial exists, update password, else create new robot
     with get_session() as session:
