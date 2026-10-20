@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 from vacuula_server.conn import Gen2Gen3Conn
 from vacuula_server.gen3.commands import send_chunk, build_command
-from vacuula_server.env import GEN3_PORT, GEN4_PORT
+from vacuula_server.env import GEN3_PORT, GEN4_PORT, VACUULA_HOSTNAME
 from vacuula_server.constants import APP_VERSION, MAPS_DIR, MINIMUM_INSTALLER_VERSION
 from vacuula_server.state import robot_connections, client_connections, pending_requests, PendingRequest
 from vacuula_server.handlers.events import robots_snapshot, notify_robots_changed, CLIENT_QUEUE_MAX
@@ -36,6 +36,7 @@ def get_server_info(req: RouterHandler) -> None:
         "min_installer_version": MINIMUM_INSTALLER_VERSION,
         "gen3_port": GEN3_PORT,
         "gen4_port": GEN4_PORT,
+        "hostname": VACUULA_HOSTNAME,  # what robots connect to
    
         "timezone": tz,
         "utc_offset_minutes": utc_offset_minutes(tz),

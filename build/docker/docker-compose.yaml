@@ -10,6 +10,7 @@ services:
       - GEN4_ENABLED=True
       - MDNS_ENABLED=True
       # - VACUULA_PASSWORD=change-me # uncomment to require a password for the web panel
+      # - VACUULA_HOSTNAME=vacuula.example.com # uncomment to change the host the robots connect
       # - TZ=Etc/UTC # uncomment and change only if Vacuula cannot detect your timezone automatically
     volumes:
       - vacuula-data:/server/data

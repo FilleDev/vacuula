@@ -36,3 +36,4 @@ schema:
   TZ: str
   HOST_IP: str
   VACUULA_PASSWORD: ""
+  VACUULA_HOSTNAME: "str?"

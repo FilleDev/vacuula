@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import socket
 from pathlib import Path
 
@@ -67,6 +68,7 @@ GEN4_ENABLED: bool = _get_bool_env("GEN4_ENABLED", True)
 MDNS_ENABLED: bool = _get_bool_env("MDNS_ENABLED", True)
 HOST_IP: str = _get_str_env("HOST_IP", "0.0.0.0")
 VACUULA_PASSWORD: str = _get_str_env("VACUULA_PASSWORD", "")
+VACUULA_HOSTNAME: str = _get_str_env("VACUULA_HOSTNAME", "vacuula.local").strip().rstrip(".").lower()
 
 # Validations
 if len(set([GEN3_PORT, GEN4_PORT, VACUULA_PORT])) != 3:
@@ -78,6 +80,11 @@ if not (100 <= GEN3_PORT <= 999):
     raise ValueError(
         "GEN3_PORT must be in port range (100-999). "
         f"Got GEN3_PORT={GEN3_PORT}"
+    )
+if not re.fullmatch(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+", VACUULA_HOSTNAME):
+    raise ValueError(
+        "VACUULA_HOSTNAME must be a hostname, like vacuula.local or vacuula.example.com. "
+        f"Got VACUULA_HOSTNAME={VACUULA_HOSTNAME!r}"
     )
 if not (1 <= GEN4_PORT <= 65535 and 1 <= VACUULA_PORT <= 65535):
     raise ValueError(

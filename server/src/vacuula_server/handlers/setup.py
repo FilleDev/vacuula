@@ -5,11 +5,13 @@ from vacuula_server.logger import get_log_files
 from zeroconf import NonUniqueNameException, Zeroconf, ServiceInfo
 import socket
 from pathlib import Path
+import os
+import re
 import subprocess
 
 from typing import TYPE_CHECKING
 
-from vacuula_server.env import VACUULA_PORT, get_host_ip
+from vacuula_server.env import VACUULA_HOSTNAME, VACUULA_PORT, get_host_ip
 from vacuula_server.constants import APP_VERSION, CERT, CERT_CONFIG, KEY, SSL_DIR, LOG_TAIL_LINES
 if TYPE_CHECKING:
     from vacuula_server.handlers.router import RouterHandler
@@ -19,10 +21,17 @@ logger = logging.getLogger(__name__)
 
 def ensure_ssl_certificate():
     if CERT.exists() and KEY.exists():
-        logger.info("SSL certificate and key already exist, skipping generation.")
-        return
+        if VACUULA_HOSTNAME in _certificate_names():
+            logger.info("SSL certificate and key already exist, skipping generation.")
+            return
+        # robots check that the name they connect to is in the certificate
+        logger.warning(
+            "SSL certificate does not include VACUULA_HOSTNAME %s, generating a new one. "
+            "Robots installed before this have to be installed again.",
+            VACUULA_HOSTNAME,
+        )
     
-    logger.info("Generating self-signed SSL certificate and key.")
+    logger.info("Generating self-signed SSL certificate and key for %s.", VACUULA_HOSTNAME)
 
     SSL_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -40,7 +49,16 @@ def ensure_ssl_certificate():
             "-config", str(CERT_CONFIG),
         ],
         check=True,
+        env={**os.environ, "VACUULA_HOSTNAME": VACUULA_HOSTNAME},
     )
+
+def _certificate_names() -> list[str]:
+    """DNS names CERT is valid for"""
+    output = subprocess.run(
+        ["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    return re.findall(r"DNS:([^,\s]+)", output)
 
 def get_cert(req: RouterHandler) -> None:
     """GET /cert - download the certificate."""
@@ -98,7 +116,8 @@ def get_log_full(req: RouterHandler) -> None:
 # mDNS stuff
 SERVICE_TYPE = "_vacuula._tcp.local."
 SERVICE_NAME = "Vacuula Server._vacuula._tcp.local."
-MDNS_HOSTNAME = "vacuula.local."
+# mDNS only answers for .local names, a domain is found through DNS
+MDNS_HOSTNAME = (VACUULA_HOSTNAME if VACUULA_HOSTNAME.endswith(".local") else "vacuula.local") + "."
 
 class MDNSAdvertiser:
     def __init__(self) -> None:
@@ -116,7 +135,7 @@ class MDNSAdvertiser:
                 "version": APP_VERSION,
                 "cert-path": "/api/cert",
                 "protocol": "http",
-                "url": "http://vacuula.local" + (f":{VACUULA_PORT}" if VACUULA_PORT != 80 else ""),
+                "url": f"http://{MDNS_HOSTNAME.rstrip('.')}" + (f":{VACUULA_PORT}" if VACUULA_PORT != 80 else ""),
             },
         )
 

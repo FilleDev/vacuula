@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import logging
 from vacuula_server.constants import MAPS_DIR
+from vacuula_server.env import VACUULA_HOSTNAME
 from vacuula_server.gen3.data import Gen3Data
 from vacuula_server.gen3.utils import get_robot_serial
 from vacuula_server.gen3.map_utils import parse_session
@@ -92,7 +93,7 @@ def upload_init(req: RouterHandler, upload_type: Literal["maps", "logs"]) -> Non
 
     res = {
         "id": map_id,
-        "post_url": "vacuula.local",
+        "post_url": VACUULA_HOSTNAME,
         "params": {
             "key": serial,
             "AWSAccessKeyId": upload_type,

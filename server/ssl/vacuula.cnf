@@ -22,4 +22,4 @@ subjectAltName = @alt_names
 DNS.1 = .neatocloud.com
 DNS.2 = *.neatocloud.com
 DNS.3 = orbital.neatocloud.com
-DNS.4 = vacuula.local
+DNS.4 = $ENV::VACUULA_HOSTNAME
