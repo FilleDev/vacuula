@@ -20,11 +20,8 @@ export interface ServerInfo {
   utc_offset_minutes: number
 }
 
-// Store for loading state callback - will be set by AppContext
-// let loadingStateCallback: ((state: { isLoading: boolean; message?: string }) => void) | null = null;
-
 const instance = axios.create({
-  baseURL: `${location.origin}/api`, 
+  baseURL: `./api`, 
 });
 
 export type LoadingState = { isLoading: boolean; message?: string };

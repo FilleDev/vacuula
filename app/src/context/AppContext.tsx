@@ -171,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (firstOnline) connectToRobot(res.data, firstOnline[0], firstOnline[1].type, firstOnline[1].name)
         });
 
-        const events = new EventSource('/api/events')
+        const events = new EventSource('./api/events')
         events.addEventListener('robots', (event) => {
             const data = JSON.parse(event.data) as QuickRobotInfo
             setRobots(data)
@@ -191,7 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!robot) return;
 
         const events = new EventSource(
-            `/api/robot/${robot.serial}/connect`,
+            `./api/robot/${robot.serial}/connect`,
         );
 
         events.onopen = () => {

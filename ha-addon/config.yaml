@@ -18,22 +18,22 @@ map:
     path: /server/data
 
 options:
-  GEN3_PORT: 335
+  # GEN3_PORT: 335
   GEN4_PORT: 3443
   VACUULA_PORT: 80
   GEN3_ENABLED: true
   GEN4_ENABLED: true
   MDNS_ENABLED: true
-  HOST_IP: "0.0.0.0"
+  # HOST_IP: "0.0.0.0"
 
 schema:
-  GEN3_PORT: int
+  # GEN3_PORT: int
   GEN4_PORT: int
   VACUULA_PORT: int
   GEN3_ENABLED: bool
   GEN4_ENABLED: bool
   MDNS_ENABLED: bool
-  TZ: str
-  HOST_IP: str
-  VACUULA_PASSWORD: ""
-  VACUULA_HOSTNAME: "str?"
+  # TZ: str
+  # HOST_IP: str
+  #VACUULA_PASSWORD: ""
+  #VACUULA_HOSTNAME: "str?"

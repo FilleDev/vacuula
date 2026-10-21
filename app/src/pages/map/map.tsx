@@ -195,7 +195,7 @@ export default () => {
             id,
             name: editForm.name,
             color: editForm.color,
-            function: closedAsPolygon ? (editForm.zoneType === BoundaryTypes.CLEANING_ZONE ? 'cleaning' as const : 'nogo' as const) : 'nogo' as const,
+            function: closedAsPolygon ? ((robot.type !== RobotType.NeatoGen4 || editForm.zoneType === BoundaryTypes.CLEANING_ZONE) ? 'cleaning' as const : 'nogo' as const) : 'nogo' as const,
             type: closedAsPolygon ? 'polygon' as const : 'polyline' as const,
             vertices: currentLinePoints,
             enabled: true

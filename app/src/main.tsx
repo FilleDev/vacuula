@@ -12,7 +12,7 @@ import App from './app.tsx'
 createRoot(document.getElementById('root')!).render(
   <RequireLogin>
     <AppProvider>
-      <BrowserRouter basename='/web'>
+      <BrowserRouter>
         <App />
       </BrowserRouter>
     </AppProvider>

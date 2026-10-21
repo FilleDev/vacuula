@@ -1,6 +1,6 @@
 # config for Home Assistant add-on
 name: Vacuula - BETA
-version: "1.1.0-b1"
+version: "1.1.0-b3"
 slug: vacuula-beta
 description: latest beta of Vacuula
 url: "https://github.com/vacuula/vacuula"
@@ -11,6 +11,10 @@ init: false
 host_network: true
 boot: auto
 image: "ghcr.io/vacuula/vacuula"
+
+ingress: true
+ingress_port: 80
+panel_icon: mdi:robot-vacuum-variant-alert
 
 map:
   - type: addon_config
@@ -33,5 +37,5 @@ schema:
   GEN3_ENABLED: bool
   GEN4_ENABLED: bool
   MDNS_ENABLED: bool
-  TZ: str
-  HOST_IP: str
+  TZ: "str?"
+  HOST_IP: "str?"
