@@ -86,7 +86,7 @@ jobs:
 
       - name: Set up Buildx
         if: steps.parse.outputs.version != ''
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
         if: steps.parse.outputs.version != ''
