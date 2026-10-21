@@ -184,6 +184,10 @@ def upload_finish(req: RouterHandler, upload_type:Literal["maps", "logs"], job_i
         else:
             logger.debug("Persistent map %s exists, updating", run_id)
             pmap.base = base
+            # an upload during the run is not yet valid; promote once a later upload is
+            if valid and not pmap.in_maps_list:
+                pmap.in_maps_list = True
+                pmap.enabled = True
 
         grun = session.get(Gen3__Run, run_id)
         if grun is None:
