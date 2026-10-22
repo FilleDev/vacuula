@@ -3,6 +3,9 @@ import re
 
 from vacuula_server.constants import MINIMUM_INSTALLER_VERSION
 
+# TODO: right now we support only X.X.X[-bX], in the future we might want to support more complex
+# idea: for anything else versions have to match exactly? but whatever we do, update both version
+# parsing in both FE, BE and build script!
 
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-b(\d+))?$")
 

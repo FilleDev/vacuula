@@ -103,4 +103,6 @@ def get_local_ip() -> str:
 
 
 def get_host_ip() -> str:
+    if HOST_IP is not '0.0.0.0':
+        return HOST_IP
     return get_docker_host_ip() or get_local_ip()

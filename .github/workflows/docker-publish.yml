@@ -104,9 +104,14 @@ jobs:
           file: build/docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          # TODO: right now we support only X.X.X[-bX], in the future we might want to support more complex
+          # idea: for anything else versions have to match exactly? but whatever we do, update both version
+          # parsing in both FE, BE and build script!
+          # in this script we just piggyback of when its a "prerelease"
           tags: |
             ${{ steps.img.outputs.name }}:${{ steps.parse.outputs.version }}
             ${{ steps.parse.outputs.latest == 'true' && format('{0}:latest', steps.img.outputs.name) || '' }}
+            ${{ steps.parse.outputs.prerelease == 'true' && format('{0}:beta', steps.img.outputs.name) || '' }} 
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
