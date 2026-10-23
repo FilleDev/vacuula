@@ -1,5 +1,5 @@
 {
-    "String-version": "2",
+    "String-version": "3",
     "common": {
         "save": "Save",
         "cancel": "Cancel",
@@ -93,7 +93,13 @@
         "modeSpotInfo": "Cleans a specific area defined by height and width.",
         "mapModeHint": "Map cleaning mode is available when robot is docked.",
         "height": "Height",
-        "width": "Width"
+        "width": "Width",
+        "btnExplain": {
+            "locate": "Lost robot?",
+            "mode": "Mode",
+            "navigation": "Navigation",
+            "cleaning": "Cleaning"
+        }
     },
     "runs": {
         "entryTitle": "{{startedBy}} cleaning | {{date}}",
@@ -165,6 +171,8 @@
     "settings": {
         "serial": "Serial nr: {{serial}}",
         "birthday": "Birthday: {{date}}",
+        "batteryCycles": "Battery cycles: {{cycles}}",
+        "robotModel": "Model: {{model}}",
         "robotSettings": "Robot settings",
         "forceFloorplan": "Force floorplan",
         "robotLanguage": "Language",
@@ -184,6 +192,12 @@
         "theme_dark": "Dark",
         "theme_soft": "Dark (soft)",
         "theme_light": "Light",
+        "mapShapeSelect": "Map blob shape",
+        "mapShape": {
+            "circle": "Circle",
+            "square": "Square",
+            "heart": "Heart"
+        },
         "units": "Units",
         "units_metric": "Metric (m², cm)",
         "units_imperial": "Imperial (ft², ft)",

@@ -1,6 +1,6 @@
 # config for Home Assistant add-on
 name: Vacuula - BETA
-version: "1.1.0-b3"
+version: "1.1.0-b7"
 slug: vacuula-beta
 description: latest beta of Vacuula
 url: "https://github.com/vacuula/vacuula"
@@ -28,7 +28,6 @@ options:
   GEN3_ENABLED: true
   GEN4_ENABLED: true
   MDNS_ENABLED: true
-  HOST_IP: "0.0.0.0"
 
 schema:
   GEN3_PORT: int

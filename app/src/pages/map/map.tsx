@@ -24,6 +24,7 @@ import { normalizeHex, pickUnusedPreset, withAlpha } from '../../components/map/
 import ColorPicker from '../../components/colorPicker/ColorPicker'
 import { isDocked } from '../../components/topbar/robotInfo'
 import { fetchGen3MapBoundaries } from '../../loaders/gen3Boundaries'
+import { getGen3CleaningMode, getGen3NavigationMode, getGen4CleaningMode, getGen4NavigationMode } from '../../utils/modes'
 
 
 export default () => {
@@ -254,12 +255,12 @@ export default () => {
     const cleanZone = async (zone: Zone) => {
         if (!persistentMap) return
         if (robot.type === RobotType.NeatoGen3) {
-            GEN3_COMMANDS.startCleaningZone(robot.serial, persistentMap, zone.id, Neato.Gen3.CleaningMode.ECO, Neato.Gen3.CleaningNavigationMode.NORMAL)
+            GEN3_COMMANDS.startCleaningZone(robot.serial, persistentMap, zone.id, getGen3CleaningMode(), getGen3NavigationMode())
             return;
         }
         const promotedFloorplan = await getPromotedFloorplan();
         if (!promotedFloorplan) return // TODO: ERROR (will do when i do gen3)
-        GEN4_COMMANDS.startCleaning(robot.serial, Neato.Gen4.CleaningMode.ECO, Neato.Gen4.CleaningNavigationMode.NORMAL, promotedFloorplan.id, true, [zone.id])
+        GEN4_COMMANDS.startCleaning(robot.serial, getGen4CleaningMode(), getGen4NavigationMode(), promotedFloorplan.id, true, [zone.id])
     }
 
     return (
@@ -301,7 +302,7 @@ export default () => {
                             <div key={i} className={styles.item} onClick={() => setPersistentMap(item.id)}>
                                 <div className={styles.info}>
                                     <span>{item.name}</span>
-                                    <span className={styles.type}>{new Date('created_at' in item ? item.created_at : item.id).toLocaleString(i18n.language)}</span>
+                                    <span className={styles.type}>{new Date('created_at' in item ? item.created_at : item.id).toLocaleString()}</span>
                                 </div>
                                 {'enabled' in item ? (
                                     <Input type="switch" skipSection={true} value={item.enabled} onChange={() => {
@@ -322,7 +323,7 @@ export default () => {
                         )}
                         <hr style={{ width: '90%' }} />
                         <div className={`${styles.item} ${styles.actionItem} ${isDocked(robot) ? '' : styles.disabled}`} onClick={() => robot.type === RobotType.NeatoGen4
-                            ? GEN4_COMMANDS.startCleaning(robot.serial, Neato.Gen4.CleaningMode.ECO, Neato.Gen4.CleaningNavigationMode.GENTLE)
+                            ? GEN4_COMMANDS.startCleaning(robot.serial, getGen4CleaningMode(), getGen4NavigationMode())
                             : GEN3_COMMANDS.startPersistentMapExploration(robot.serial)}>
                             <div className={styles.info}>
                                 <span>{t('map.newMap')}</span>

@@ -60,7 +60,7 @@ export default () => {
                             <span>
                                 {t('runs.entryTitle', {
                                     startedBy: 'timing' in item ? item.started_by : item.run.launched_from,
-                                    date: new Date('timing' in item ? item.timing.start : item.run.start_at).toLocaleString(i18n.language)
+                                    date: new Date('timing' in item ? item.timing.start : item.run.start_at).toLocaleString()
                                 })}
                             </span>
                             <span className={styles.type}>
@@ -82,7 +82,7 @@ export default () => {
                 handle={false}
                 onOpenChange={setDrawerOpen}
                 openHeightPercent={70}
-                title={selectedCleaning && new Date('timing' in selectedCleaning ? selectedCleaning.timing.start : selectedCleaning.run.start_at).toLocaleString(i18n.language)}
+                title={selectedCleaning && new Date('timing' in selectedCleaning ? selectedCleaning.timing.start : selectedCleaning.run.start_at).toLocaleString()}
             >
 
                 <>
