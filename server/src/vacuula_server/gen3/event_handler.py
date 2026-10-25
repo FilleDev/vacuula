@@ -15,7 +15,7 @@ robot_buffers = {}
 def robot_data(serial: str, data: bytes):
     """Handle incoming data from robot"""
 
-    print(bytes)
+    print("raw chunk:", repr(data))
 
     # create robot state if missing
     if serial not in robot_buffers:
