@@ -80,7 +80,7 @@ def handle_robot(conn, addr):
                 break
 
             if raw == b"\x06":
-                logger.info("heartbeat from %s", rc.serial or addr)
+                logger.debug("heartbeat from %s", rc.serial or addr)
                 continue
             if raw == b"\x00":
                 logger.info("CLOSE from %s", rc.serial or addr)
