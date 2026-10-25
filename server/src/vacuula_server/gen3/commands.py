@@ -66,13 +66,18 @@ def build_heartbeat():
 def build_command(robot_serial: str, cmd: dict):
     global req_id
 
+    print("Gen3 cmd:", cmd)
+
     payload = json.dumps({
         "reqId": str(req_id),
         **cmd
-    })
+    }, ensure_ascii=False)
 
-    print(payload)
+    print("Gen3 command JSON:", payload)
 
     req_id += 1
 
-    return [(req_id - 1), sign_cmd(robot_serial, payload).encode("utf-8")]
+    signed_command = sign_cmd(robot_serial, payload).encode("utf-8")
+    print("Gen3 command sent:", signed_command.decode("utf-8"))
+
+    return [(req_id - 1), signed_command]
