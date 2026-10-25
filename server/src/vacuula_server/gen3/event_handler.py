@@ -15,9 +15,14 @@ robot_buffers = {}
 def robot_data(serial: str, data: bytes):
     """Handle incoming data from robot"""
 
+    print(bytes)
+
     # create robot state if missing
     if serial not in robot_buffers:
-        robot_buffers[serial] = int(data, 16)  # hex to int
+        size = data.strip()
+        if not size:
+            return
+        robot_buffers[serial] = int(size, 16)  # hex to int
         return
 
     msg_size = robot_buffers[serial]
@@ -25,15 +30,26 @@ def robot_data(serial: str, data: bytes):
     # remove last two bytes (\r\n)
     data = data[:-2]
 
-    if (chr(data[0]) != '{' and msg_size == 1):
-        logger.debug("heartbeat from robot %s", serial)
+    if not data:
+        logger.debug("empty chunk from robot %s", serial)
+        del robot_buffers[serial]
         return
 
+    if (chr(data[0]) != '{' and msg_size == 1):
+        logger.debug("heartbeat from robot %s", serial)
+        del robot_buffers[serial]
+        return
 
     try:
         decoded: dict = json.loads(data.decode())
     except Exception as e:
         logger.error("failed to parse JSON from %s: %s", serial, e)
+        robot_buffers.pop(serial, None)
+        return
+
+    if not isinstance(decoded, dict):
+        logger.debug("ignoring non-object JSON from %s: %r", serial, decoded)
+        robot_buffers.pop(serial, None)
         return
 
     eventId = decoded.get("eventId")
@@ -63,4 +79,4 @@ def robot_data(serial: str, data: bytes):
     else:
         logger.error("no eventId or reqId in data from %s", serial)
 
-    del robot_buffers[serial]
+    robot_buffers.pop(serial, None)
