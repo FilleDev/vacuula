@@ -28,12 +28,18 @@ def start():
             client, addr = sock.accept()
             client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             client.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20_000)
+            client.settimeout(ROBOT_SOCKET_TIMEOUT_S)
 
             try:
                 tls = ctx.wrap_socket(client, server_side=True)
-            except ssl.SSLError as e:
-                logger.error("TLS handshake failed from %s: %s", addr, e)
-                client.close()
+            except OSError as e:
+                # A peer can reset or time out while TLS is negotiating. Drop
+                # that connection and keep the accept loop alive for robots.
+                logger.warning("Gen4 TLS handshake failed from %s: %s", addr, e)
+                try:
+                    client.close()
+                except OSError:
+                    pass
                 continue
 
             threading.Thread(target=handle_robot, args=(tls, addr), daemon=True).start()
