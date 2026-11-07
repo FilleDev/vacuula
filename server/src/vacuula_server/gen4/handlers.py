@@ -34,13 +34,17 @@ def handle_login(rc: RobotConn, msg):
     serial = msg.get("serial", "<unknown>")
     
     if serial == "<unknown>" or rc.gen != Generation.GEN4:
-        # fail and show error
+        logger.warning(
+            "Ignoring invalid Gen4 login: serial=%r generation=%s",
+            serial, rc.gen,
+        )
         return
     
     rc.serial = serial
     robot_connections[serial] = rc
 
     ip = rc.conn.socket.getpeername()[0]
+    logger.info("Gen4 login received for %s from %s; requesting robot info", serial, ip)
 
     response = {
         "code": 200,
@@ -53,7 +57,11 @@ def handle_login(rc: RobotConn, msg):
             "user_id": "vacuula-user",
         },
     }
-    send_json(rc.conn.socket, response) # TODO cleanup
+    try:
+        send_json(rc.conn.socket, response) # TODO cleanup
+    except Exception:
+        logger.exception("Failed to send Gen4 login response to %s", serial)
+        raise
 
     slot = PendingRequest()
     req_id, err = robot_send_request(rc, { "ability": "info.robot" }, slot)
