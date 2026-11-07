@@ -116,13 +116,24 @@ def handle_robot(conn, addr):
             else:
                 logger.warning("unknown msg type %r from %s: %s", msg_type, rc.serial or addr, json.dumps(msg)[:200])
 
+    except (
+        BrokenPipeError,
+        ConnectionResetError,
+        ConnectionAbortedError,
+        ssl.SSLEOFError,
+        ssl.SSLZeroReturnError,
+    ):
+        # Robots can close the TLS connection while we're waiting for a packet.
+        # Treat that as a normal disconnect; the finally block handles cleanup.
+        pass
     except Exception as e:
         logger.error("error handling robot %s: %s", rc.serial or addr, e)
         import traceback
         traceback.print_exc()
     finally:
         rc.stop_event.set()
-        del robot_connections[rc.serial]
+        if robot_connections.get(rc.serial) is rc:
+            del robot_connections[rc.serial]
         logger.info("Robot %s disconnected", rc.serial or addr)
         notify_robots_changed()
         try:
