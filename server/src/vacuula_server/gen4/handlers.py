@@ -134,7 +134,9 @@ def heartbeat_thread(rc: RobotConn):
         if rc.stop_event.wait(30):
             return
         try:
+            logger.debug("sending heartbeat to Gen4 robot %s", rc.serial)
             send_heartbeat(rc.conn.socket)
+            logger.debug("heartbeat sent to Gen4 robot %s", rc.serial)
         except Exception as e:
             logger.error("heartbeat send failed for %s: %s", rc.serial, e)
             rc.stop_event.set()

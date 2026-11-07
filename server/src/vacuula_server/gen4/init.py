@@ -104,6 +104,18 @@ def recv_packet(sock, peer):
                 )
                 header_timeout_logged = True
             continue
+        except (
+            BrokenPipeError,
+            ConnectionResetError,
+            ConnectionAbortedError,
+            ssl.SSLEOFError,
+            ssl.SSLZeroReturnError,
+        ) as e:
+            logger.info(
+                "Gen4 socket read failed from %s in packet header (%d/4 bytes): %s",
+                peer, len(hdr), e,
+            )
+            raise
         if not chunk:
             logger.info(
                 "Gen4 peer %s closed while reading packet header (%d/4 bytes)",
@@ -130,6 +142,18 @@ def recv_packet(sock, peer):
                 )
                 body_timeout_logged = True
             continue
+        except (
+            BrokenPipeError,
+            ConnectionResetError,
+            ConnectionAbortedError,
+            ssl.SSLEOFError,
+            ssl.SSLZeroReturnError,
+        ) as e:
+            logger.info(
+                "Gen4 socket read failed from %s in packet body (%d/%d bytes): %s",
+                peer, len(data), n, e,
+            )
+            raise
         if not chunk:
             logger.info(
                 "Gen4 peer %s closed during packet body (%d/%d bytes)",
