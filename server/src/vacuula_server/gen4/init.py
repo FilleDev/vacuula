@@ -26,6 +26,7 @@ def start():
 
         while True:
             client, addr = sock.accept()
+            logger.info("Gen4 TCP connection accepted from %s", addr)
             client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             client.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20_000)
             client.settimeout(ROBOT_SOCKET_TIMEOUT_S)
