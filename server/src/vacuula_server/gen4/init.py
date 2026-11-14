@@ -12,7 +12,9 @@ from vacuula_server.state import robot_connections
 
 logger = logging.getLogger(__name__)
 
-ROBOT_SOCKET_TIMEOUT_S = 20
+GEN4_HANDSHAKE_TIMEOUT_S = 20
+GEN4_READ_TIMEOUT_S = 75
+GEN4_MAX_CONNECTIONS = 64
 
 def start():
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -21,72 +23,94 @@ def start():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((HOST_IP, GEN4_PORT))
-        sock.listen(5)
+        sock.listen(GEN4_MAX_CONNECTIONS)
         logger.info("Gen4 listening on %s:%d", HOST_IP, GEN4_PORT)
 
+        connection_slots = threading.BoundedSemaphore(GEN4_MAX_CONNECTIONS)
         while True:
             client, addr = sock.accept()
             logger.info("Gen4 TCP connection accepted from %s", addr)
-            client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20_000)
-            client.settimeout(ROBOT_SOCKET_TIMEOUT_S)
-
-            # Peek at only the start of the stream so a failed TLS handshake can
-            # be distinguished from a silent peer or plaintext sent to this port.
-            try:
-                initial_bytes = client.recv(8, socket.MSG_PEEK)
-            except TimeoutError as e:
+            if not connection_slots.acquire(blocking=False):
                 logger.warning(
-                    "Gen4 TCP peer %s sent no data within %ss, before TLS handshake: %s",
-                    addr, ROBOT_SOCKET_TIMEOUT_S, e,
+                    "Gen4 connection limit (%d) reached; closing peer %s",
+                    GEN4_MAX_CONNECTIONS, addr,
                 )
                 client.close()
                 continue
-            except OSError as e:
-                logger.warning("Gen4 TCP peer %s failed before TLS handshake: %s", addr, e)
-                try:
-                    client.close()
-                except OSError:
-                    pass
-                continue
-
-            if not initial_bytes:
-                logger.info("Gen4 TCP peer %s closed before TLS handshake", addr)
-                client.close()
-                continue
-
-            if initial_bytes.startswith(b"\x16"):
-                protocol_hint = "TLS record"
-            elif initial_bytes.startswith((b"GET ", b"POST ", b"PUT ", b"HEAD ", b"PRI ")):
-                protocol_hint = "plaintext HTTP"
-            else:
-                protocol_hint = "unknown protocol"
-            logger.info(
-                "Gen4 TCP connection from %s; initial bytes=%s (%s)",
-                addr, initial_bytes.hex(" "), protocol_hint,
-            )
-
             try:
-                tls = ctx.wrap_socket(client, server_side=True)
-            except OSError as e:
-                # A peer can reset or time out while TLS is negotiating. Keep
-                # the initial bytes in the log to help identify wrong protocols.
-                logger.warning(
-                    "Gen4 TLS handshake failed from %s (initial bytes=%s): %s",
-                    addr, initial_bytes.hex(" "), e,
-                )
-                try:
-                    client.close()
-                except OSError:
-                    pass
-                continue
+                threading.Thread(
+                    target=handle_client,
+                    args=(client, addr, ctx, connection_slots),
+                    daemon=True,
+                ).start()
+            except Exception:
+                connection_slots.release()
+                client.close()
+                logger.exception("failed to start Gen4 connection worker for %s", addr)
 
-            cipher = tls.cipher()
-            logger.info(
-                "Gen4 TLS established with %s: version=%s cipher=%s",
-                addr, tls.version(), cipher[0] if cipher else "unknown",
+
+def handle_client(client, addr, ctx, connection_slots):
+    tls = None
+    try:
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20_000)
+        client.settimeout(GEN4_HANDSHAKE_TIMEOUT_S)
+
+        # Peek at the stream start so non-TLS traffic and early peer closes
+        # can be distinguished from a failed TLS handshake.
+        try:
+            initial_bytes = client.recv(8, socket.MSG_PEEK)
+        except TimeoutError as e:
+            logger.warning(
+                "Gen4 TCP peer %s sent no data within %ss, before TLS handshake: %s",
+                addr, GEN4_HANDSHAKE_TIMEOUT_S, e,
             )
-            threading.Thread(target=handle_robot, args=(tls, addr), daemon=True).start()
+            return
+        except OSError as e:
+            logger.warning("Gen4 TCP peer %s failed before TLS handshake: %s", addr, e)
+            return
+
+        if not initial_bytes:
+            logger.info(
+                "Gen4 peer %s sent TCP EOF before TLS handshake (no client data received)",
+                addr,
+            )
+            return
+
+        if initial_bytes.startswith(b"\x16"):
+            protocol_hint = "TLS record"
+        elif initial_bytes.startswith((b"GET ", b"POST ", b"PUT ", b"HEAD ", b"PRI ")):
+            protocol_hint = "plaintext HTTP"
+        else:
+            protocol_hint = "unknown protocol"
+        logger.info(
+            "Gen4 TCP connection from %s; initial bytes=%s (%s)",
+            addr, initial_bytes.hex(" "), protocol_hint,
+        )
+
+        try:
+            tls = ctx.wrap_socket(client, server_side=True)
+        except OSError as e:
+            logger.warning(
+                "Gen4 TLS handshake failed from %s (initial bytes=%s): %s",
+                addr, initial_bytes.hex(" "), e,
+            )
+            return
+
+        cipher = tls.cipher()
+        logger.info(
+            "Gen4 TLS established with %s: version=%s cipher=%s",
+            addr, tls.version(), cipher[0] if cipher else "unknown",
+        )
+        handle_robot(tls, addr)
+    except Exception:
+        logger.exception("error setting up Gen4 connection from %s", addr)
+    finally:
+        try:
+            (tls or client).close()
+        except OSError:
+            logger.debug("error closing Gen4 socket for %s", addr, exc_info=True)
+        connection_slots.release()
 
 
 
@@ -100,22 +124,16 @@ def recv_packet(sock, peer):
             if not header_timeout_logged:
                 logger.info(
                     "Gen4 peer %s has sent no packet header data for %ss; still waiting (%d/4 bytes)",
-                    peer, ROBOT_SOCKET_TIMEOUT_S, len(hdr),
+                    peer, GEN4_READ_TIMEOUT_S, len(hdr),
                 )
                 header_timeout_logged = True
             continue
-        except (
-            BrokenPipeError,
-            ConnectionResetError,
-            ConnectionAbortedError,
-            ssl.SSLEOFError,
-            ssl.SSLZeroReturnError,
-        ) as e:
-            logger.info(
+        except OSError as e:
+            logger.warning(
                 "Gen4 socket read failed from %s in packet header (%d/4 bytes): %s",
                 peer, len(hdr), e,
             )
-            raise
+            return None
         if not chunk:
             logger.info(
                 "Gen4 peer %s closed while reading packet header (%d/4 bytes)",
@@ -138,22 +156,16 @@ def recv_packet(sock, peer):
             if not body_timeout_logged:
                 logger.info(
                     "Gen4 peer %s sent no packet body data for %ss; still waiting (%d/%d bytes)",
-                    peer, ROBOT_SOCKET_TIMEOUT_S, len(data), n,
+                    peer, GEN4_READ_TIMEOUT_S, len(data), n,
                 )
                 body_timeout_logged = True
             continue
-        except (
-            BrokenPipeError,
-            ConnectionResetError,
-            ConnectionAbortedError,
-            ssl.SSLEOFError,
-            ssl.SSLZeroReturnError,
-        ) as e:
-            logger.info(
+        except OSError as e:
+            logger.warning(
                 "Gen4 socket read failed from %s in packet body (%d/%d bytes): %s",
                 peer, len(data), n, e,
             )
-            raise
+            return None
         if not chunk:
             logger.info(
                 "Gen4 peer %s closed during packet body (%d/%d bytes)",
@@ -166,7 +178,7 @@ def recv_packet(sock, peer):
 
 def handle_robot(conn, addr):
     rc = RobotConn("<unknown>", Generation.GEN4, Gen4Conn(conn))
-    conn.settimeout(ROBOT_SOCKET_TIMEOUT_S)
+    conn.settimeout(GEN4_READ_TIMEOUT_S)
     heartbeat_seen = False
 
     try:
