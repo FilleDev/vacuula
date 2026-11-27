@@ -4,7 +4,7 @@ from vacuula_server.env import GEN4_PORT, HOST_IP
 from vacuula_server.handlers.events import notify_robots_changed
 from vacuula_server.tls import CERT, KEY
 import threading
-import socket, ssl, struct, json
+import errno, socket, ssl, struct, json
 from vacuula_server.generation import Generation
 from vacuula_server.conn import RobotConn, Gen4Conn
 from vacuula_server.gen4.handlers import handle_login, robot_response, heartbeat_thread, robot_event, roboot_request
@@ -12,9 +12,40 @@ from vacuula_server.state import robot_connections
 
 logger = logging.getLogger(__name__)
 
-GEN4_HANDSHAKE_TIMEOUT_S = 20
+# The robot's TLS client (tron OrbitalClient.sslify) does its handshake on a
+# blocking socket with no timeout. If our ServerHello flight never reaches it,
+# it waits forever and only a reboot recovers it. So give lost segments time to
+# be retransmitted instead of giving up after 20s.
+GEN4_HANDSHAKE_TIMEOUT_S = 60
 GEN4_READ_TIMEOUT_S = 75
 GEN4_MAX_CONNECTIONS = 64
+# How long sent data may stay unacknowledged before the kernel kills the
+# connection. 20s turned a short Wi-Fi/router blip into a dropped robot.
+GEN4_TCP_USER_TIMEOUT_MS = 180_000
+# Keepalive probes detect a silently dead peer well before the user timeout.
+GEN4_KEEPIDLE_S = 60
+GEN4_KEEPINTVL_S = 15
+GEN4_KEEPCNT = 4
+# Cap our segment size so the certificate flight still fits through paths with
+# a smaller MTU (PPPoE, VPNs) when ICMP "fragmentation needed" is filtered.
+GEN4_MAX_SEGMENT = 1200
+
+
+def _setsockopt_if_supported(sock, level, name, value):
+    opt = getattr(socket, name, None)
+    if opt is None:
+        return
+    try:
+        sock.setsockopt(level, opt, value)
+    except OSError as e:
+        logger.debug("could not set %s=%r: %s", name, value, e)
+
+
+def _is_dead_connection_timeout(e):
+    # socket.timeout is TimeoutError, but so is OSError(ETIMEDOUT), which the
+    # kernel raises when it has given up on the connection. Only the former
+    # means "nothing arrived yet, keep waiting".
+    return getattr(e, "errno", None) == errno.ETIMEDOUT
 
 def start():
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -22,6 +53,7 @@ def start():
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        _setsockopt_if_supported(sock, socket.IPPROTO_TCP, "TCP_MAXSEG", GEN4_MAX_SEGMENT)
         sock.bind((HOST_IP, GEN4_PORT))
         sock.listen(GEN4_MAX_CONNECTIONS)
         logger.info("Gen4 listening on %s:%d", HOST_IP, GEN4_PORT)
@@ -53,7 +85,10 @@ def handle_client(client, addr, ctx, connection_slots):
     tls = None
     try:
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20_000)
+        _setsockopt_if_supported(client, socket.IPPROTO_TCP, "TCP_KEEPIDLE", GEN4_KEEPIDLE_S)
+        _setsockopt_if_supported(client, socket.IPPROTO_TCP, "TCP_KEEPINTVL", GEN4_KEEPINTVL_S)
+        _setsockopt_if_supported(client, socket.IPPROTO_TCP, "TCP_KEEPCNT", GEN4_KEEPCNT)
+        _setsockopt_if_supported(client, socket.IPPROTO_TCP, "TCP_USER_TIMEOUT", GEN4_TCP_USER_TIMEOUT_MS)
         client.settimeout(GEN4_HANDSHAKE_TIMEOUT_S)
 
         # Peek at the stream start so non-TLS traffic and early peer closes
@@ -120,7 +155,13 @@ def recv_packet(sock, peer):
     while len(hdr) < 4:
         try:
             chunk = sock.recv(4 - len(hdr))
-        except TimeoutError:
+        except TimeoutError as e:
+            if _is_dead_connection_timeout(e):
+                logger.warning(
+                    "Gen4 connection to %s timed out in the kernel (robot stopped acknowledging data) in packet header (%d/4 bytes): %s",
+                    peer, len(hdr), e,
+                )
+                return None
             if not header_timeout_logged:
                 logger.info(
                     "Gen4 peer %s has sent no packet header data for %ss; still waiting (%d/4 bytes)",
@@ -152,7 +193,13 @@ def recv_packet(sock, peer):
     while len(data) < n:
         try:
             chunk = sock.recv(min(65536, n - len(data)))
-        except TimeoutError:
+        except TimeoutError as e:
+            if _is_dead_connection_timeout(e):
+                logger.warning(
+                    "Gen4 connection to %s timed out in the kernel (robot stopped acknowledging data) in packet body (%d/%d bytes): %s",
+                    peer, len(data), n, e,
+                )
+                return None
             if not body_timeout_logged:
                 logger.info(
                     "Gen4 peer %s sent no packet body data for %ss; still waiting (%d/%d bytes)",
